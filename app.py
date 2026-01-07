@@ -288,30 +288,251 @@ def results_page():
                 st.session_state.page = "roadmap"
                 st.rerun()
 
+
+
+DOMAIN_ROADMAPS = {
+
+    "Technology & Software": {
+        "Foundation Phase": [
+            "Basic programming concepts",
+            "Computer fundamentals",
+            "Logical and analytical thinking"
+        ],
+        "Skill Development Phase": [
+            "Programming languages (Python / Java)",
+            "Databases and development tools",
+            "Version control and testing"
+        ],
+        "Entry & Early Career Phase": [
+            "Junior Software Engineer",
+            "Data Analyst",
+            "QA / Test Engineer"
+        ],
+        "Growth & Specialization Phase": [
+            "Senior Engineer",
+            "Product Manager (Tech)",
+            "System Architect / Specialist"
+        ]
+    },
+
+    "Business, Management & Operations": {
+        "Foundation Phase": [
+            "Business fundamentals",
+            "Economics and accounting basics",
+            "Communication skills"
+        ],
+        "Skill Development Phase": [
+            "Business analytics",
+            "Process optimization",
+            "Stakeholder management"
+        ],
+        "Entry & Early Career Phase": [
+            "Business Analyst",
+            "Operations Executive",
+            "Management Trainee"
+        ],
+        "Growth & Specialization Phase": [
+            "Operations Manager",
+            "Management Consultant",
+            "Entrepreneur"
+        ]
+    },
+
+    "Design, Media & Digital Creative": {
+        "Foundation Phase": [
+            "Design principles",
+            "Creativity and storytelling",
+            "Visual aesthetics"
+        ],
+        "Skill Development Phase": [
+            "Design tools (Figma, Adobe)",
+            "UX fundamentals",
+            "Content creation"
+        ],
+        "Entry & Early Career Phase": [
+            "UI/UX Designer",
+            "Graphic Designer",
+            "Content Strategist"
+        ],
+        "Growth & Specialization Phase": [
+            "Design Lead",
+            "Creative Director",
+            "Digital Media Specialist"
+        ]
+    },
+
+    "Fashion, Architecture & Physical Design": {
+        "Foundation Phase": [
+            "Design basics",
+            "Material knowledge",
+            "Sketching and visualization"
+        ],
+        "Skill Development Phase": [
+            "CAD tools",
+            "Structural and aesthetic design",
+            "Industry standards"
+        ],
+        "Entry & Early Career Phase": [
+            "Fashion Designer",
+            "Textile Designer",
+            "Junior Architect"
+        ],
+        "Growth & Specialization Phase": [
+            "Senior Designer",
+            "Interior Designer",
+            "Architectural Consultant"
+        ]
+    },
+
+    "Finance, Accounting & Economics": {
+        "Foundation Phase": [
+            "Accounting fundamentals",
+            "Mathematics and statistics",
+            "Economic principles"
+        ],
+        "Skill Development Phase": [
+            "Financial analysis",
+            "Taxation and compliance",
+            "Financial modeling"
+        ],
+        "Entry & Early Career Phase": [
+            "Financial Analyst",
+            "Accounting Executive",
+            "Risk Analyst"
+        ],
+        "Growth & Specialization Phase": [
+            "Chartered Accountant",
+            "Investment Banker",
+            "Finance Manager"
+        ]
+    },
+
+    "Government, Public Service & Education": {
+        "Foundation Phase": [
+            "General studies",
+            "Ethics and governance",
+            "Communication skills"
+        ],
+        "Skill Development Phase": [
+            "Policy analysis",
+            "Teaching methodologies",
+            "Research skills"
+        ],
+        "Entry & Early Career Phase": [
+            "Government Exam Aspirant",
+            "Teaching Assistant",
+            "Policy Research Assistant"
+        ],
+        "Growth & Specialization Phase": [
+            "Civil Services Officer",
+            "Senior Educator",
+            "Public Sector Leader"
+        ]
+    },
+
+    "Healthcare & Life Sciences": {
+        "Foundation Phase": [
+            "Biology fundamentals",
+            "Human anatomy",
+            "Healthcare ethics"
+        ],
+        "Skill Development Phase": [
+            "Clinical knowledge",
+            "Laboratory practices",
+            "Healthcare regulations"
+        ],
+        "Entry & Early Career Phase": [
+            "Medical Intern",
+            "Pharmacist",
+            "Public Health Associate"
+        ],
+        "Growth & Specialization Phase": [
+            "Medical Doctor",
+            "Specialist",
+            "Healthcare Administrator"
+        ]
+    },
+
+    "Aviation, Law & Other Regulated Professions": {
+        "Foundation Phase": [
+            "Domain-specific academics",
+            "Regulatory awareness",
+            "Professional ethics"
+        ],
+        "Skill Development Phase": [
+            "Professional certifications",
+            "Practical training",
+            "Compliance standards"
+        ],
+        "Entry & Early Career Phase": [
+            "Commercial Pilot",
+            "Junior Advocate",
+            "Chartered Engineer"
+        ],
+        "Growth & Specialization Phase": [
+            "Senior Pilot",
+            "Senior Lawyer",
+            "Industry Expert"
+        ]
+    },
+
+    "Skilled & Emerging Careers": {
+        "Foundation Phase": [
+            "Digital literacy",
+            "Basic technical skills",
+            "Online platforms understanding"
+        ],
+        "Skill Development Phase": [
+            "Digital marketing",
+            "SEO and analytics",
+            "Automation tools"
+        ],
+        "Entry & Early Career Phase": [
+            "Digital Marketing Specialist",
+            "SEO Analyst",
+            "Technical Content Creator"
+        ],
+        "Growth & Specialization Phase": [
+            "Growth Strategist",
+            "No-Code Specialist",
+            "Independent Consultant"
+        ]
+    }
+}
+
 # =====================================================
 # ROADMAP PAGE
 # =====================================================
 def roadmap_page():
     career = st.session_state.selected_career
-    display_name = career.get('display_name', career['career_name'])
 
-    header(display_name, "Standard Career Roadmap")
+    if career is None:
+        st.warning("No career selected.")
+        return
+
+    display_name = career.get("display_name", career["career_name"])
+    domain = str(career["domain"])
+
+    header(display_name, "Domain-Based Career Roadmap")
 
     st.subheader("📌 Overview")
     st.write(
-        
+        f"This roadmap represents a **standard progression** within the "
+        f"**{domain}** domain. Individual paths may vary based on effort and opportunities."
+    )
 
     st.subheader("🛠️ Career Roadmap")
-    standardized_steps = [
-        "Foundation: Build subject fundamentals and core concepts",
-        "Skill Development: Learn domain-specific tools and techniques",
-        "Practical Exposure: Projects, internships, hands-on experience",
-        "Entry Role: Apply for junior or entry-level positions",
-        "Growth & Specialization: Advance to senior roles or specialize"
-    ]
 
-    for step in standardized_steps:
-        st.markdown(f"- {step}")
+    roadmap = DOMAIN_ROADMAPS.get(domain)
+
+    if roadmap:
+        for phase, points in roadmap.items():
+            st.markdown(f"### 🔹 {phase}")
+            for p in points:
+                st.markdown(f"- {p}")
+            st.divider()
+    else:
+        st.info("Roadmap not available for this domain.")
 
     st.subheader("🚀 Typical Entry Roles")
     for role in career["entry_roles"].split(","):
@@ -324,6 +545,7 @@ def roadmap_page():
     if st.button("← Back to Results"):
         st.session_state.page = "results"
         st.rerun()
+
 
 # =====================================================
 # ROUTER
