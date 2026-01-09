@@ -1,14 +1,13 @@
-# PathWise – Final Streamlit Dashboard
-# AI-Assisted Career Path Explorer
-
 import streamlit as st
 import pandas as pd
+import joblib
+import numpy as np
 
 # =====================================================
 # PAGE CONFIG
 # =====================================================
 st.set_page_config(
-    page_title="PathWise – Career Path Explorer",
+    page_title="PathWise – AI Career Explorer",
     page_icon="🧭",
     layout="wide"
 )
@@ -92,467 +91,948 @@ section[data-testid="stSidebar"] button {
 </style>
 """, unsafe_allow_html=True)
 
-# =====================================================
-# SESSION STATE
-# =====================================================
-if "page" not in st.session_state:
-    st.session_state.page = "questionnaire"
 
-if "profile" not in st.session_state:
-    st.session_state.profile = {}
 
-if "selected_career" not in st.session_state:
-    st.session_state.selected_career = None
 
 # =====================================================
-# LOAD DATASET
+# ML MODEL LOADING & PREDICTION LOGIC
 # =====================================================
-@st.cache_data
-def load_careers():
-    return pd.read_csv("pathwise_career_dataset_300.csv")
+@st.cache_resource
+def load_ml_assets():
+    try:
+        model = joblib.load('career_fit_regressor.joblib')
+        mlb_int = joblib.load('interests_binarizer.joblib')
+        mlb_str = joblib.load('strengths_binarizer.joblib')
+        features = joblib.load('model_features.joblib')
+        all_careers = joblib.load('career_list.joblib')
+        return model, mlb_int, mlb_str, features, all_careers
+    except Exception as e:
+        st.error(f"Error loading ML assets: {e}")
+        return None, None, None, None, None
 
-career_df = load_careers()
+model, mlb_int, mlb_str, model_features, all_careers = load_ml_assets()
+
+def get_ml_recommendations(profile):
+    """Predicts fit_score and normalizes them for diverse results."""
+    input_rows = []
+    for career in all_careers:
+        row = {
+            'education': profile['education'],
+            'field': profile['field'],
+            'learning_rate': profile['learning_rate'],
+            'time_horizon': profile['time_horizon'], # Time to Stability
+            'risk_tolerance': profile['risk'],
+            'career': career,
+            'interests': profile['interests'],
+            'strengths': profile['strengths']
+        }
+        input_rows.append(row)
+    
+    df_input = pd.DataFrame(input_rows)
+
+    # ML Preprocessing
+    int_encoded = mlb_int.transform(df_input['interests'])
+    str_encoded = mlb_str.transform(df_input['strengths'])
+    df_int = pd.DataFrame(int_encoded, columns=[f"interest_{c}" for c in mlb_int.classes_])
+    df_str = pd.DataFrame(str_encoded, columns=[f"strength_{c}" for c in mlb_str.classes_])
+    df_cat = pd.get_dummies(df_input[['education', 'field', 'learning_rate', 'time_horizon', 'risk_tolerance', 'career']])
+
+    # Feature Alignment
+    X_final = pd.concat([df_cat, df_int, df_str], axis=1)
+    for col in model_features:
+        if col not in X_final.columns:
+            X_final[col] = 0
+    X_final = X_final[model_features]
+
+    # Predict & Normalization
+    raw_scores = model.predict(X_final)
+    max_raw, min_raw = np.max(raw_scores), np.min(raw_scores)
+    
+    results = []
+    for i, career in enumerate(all_careers):
+        # Stretch scores so top matches feel significant (80%+)
+        norm_score = (raw_scores[i] - min_raw) / (max_raw - min_raw) if max_raw != min_raw else 0.5
+        display_score = 80 + (norm_score * 15) 
+        results.append({'career_name': career, 'fit_score': round(float(display_score), 1)})
+    
+    return sorted(results, key=lambda x: x['fit_score'], reverse=True)[:3]
+
+# =====================================================
+# INTERNAL CAREER KNOWLEDGE BASE (36 ROADMAPS)
+# =====================================================
+CAREER_ROADMAPS = {
+
+    # ================================
+    # Technology & Software (4)
+    # ================================
+    "Software Engineer": {
+        "Foundation": [
+            "Programming fundamentals (Python/Java)",
+            "Computer science basics",
+            "Problem-solving and logic"
+        ],
+        "Skill Building": [
+            "Data Structures & Algorithms",
+            "Databases and APIs",
+            "Version control (Git)"
+        ],
+        "Entry Level": [
+            "Junior Software Engineer",
+            "Associate Developer",
+            "Backend/Frontend Trainee"
+        ],
+        "Growth": [
+            "Senior Engineer",
+            "Tech Lead",
+            "System Architect"
+        ]
+    },
+
+    "Data Analyst": {
+        "Foundation": [
+            "Excel and data basics",
+            "Statistics fundamentals",
+            "Data interpretation"
+        ],
+        "Skill Building": [
+            "SQL and Python",
+            "Data visualization tools",
+            "Business analytics"
+        ],
+        "Entry Level": [
+            "Junior Data Analyst",
+            "Business Analyst",
+            "Reporting Analyst"
+        ],
+        "Growth": [
+            "Senior Analyst",
+            "Data Scientist",
+            "Analytics Manager"
+        ]
+    },
+
+    "Product Manager (Tech)": {
+        "Foundation": [
+            "Product lifecycle understanding",
+            "Business fundamentals",
+            "Communication skills"
+        ],
+        "Skill Building": [
+            "User research",
+            "Agile/Scrum methods",
+            "Roadmapping tools"
+        ],
+        "Entry Level": [
+            "Associate Product Manager",
+            "Product Analyst"
+        ],
+        "Growth": [
+            "Senior Product Manager",
+            "Product Lead",
+            "Head of Product"
+        ]
+    },
+
+    "QA / Test Engineer": {
+        "Foundation": [
+            "Software testing concepts",
+            "SDLC understanding",
+            "Attention to detail"
+        ],
+        "Skill Building": [
+            "Manual & automation testing",
+            "Test tools (Selenium)",
+            "Bug tracking systems"
+        ],
+        "Entry Level": [
+            "QA Engineer",
+            "Test Analyst"
+        ],
+        "Growth": [
+            "Automation Lead",
+            "QA Manager",
+            "Release Manager"
+        ]
+    },
+
+    # ================================
+    # Business, Management & Operations (4)
+    # ================================
+    "Business Analyst": {
+        "Foundation": [
+            "Business fundamentals",
+            "Communication skills",
+            "Problem-solving"
+        ],
+        "Skill Building": [
+            "Requirement gathering",
+            "Data analysis tools",
+            "Process modeling"
+        ],
+        "Entry Level": [
+            "Junior Business Analyst",
+            "Operations Analyst"
+        ],
+        "Growth": [
+            "Senior BA",
+            "Product Manager",
+            "Consultant"
+        ]
+    },
+
+    "Operations Manager": {
+        "Foundation": [
+            "Operations basics",
+            "Organizational behavior",
+            "Time management"
+        ],
+        "Skill Building": [
+            "Process optimization",
+            "Supply chain basics",
+            "People management"
+        ],
+        "Entry Level": [
+            "Operations Executive",
+            "Process Coordinator"
+        ],
+        "Growth": [
+            "Senior Operations Manager",
+            "General Manager"
+        ]
+    },
+
+    "Management Consultant": {
+        "Foundation": [
+            "Business strategy basics",
+            "Analytical thinking",
+            "Presentation skills"
+        ],
+        "Skill Building": [
+            "Case study analysis",
+            "Data-driven decision making",
+            "Client communication"
+        ],
+        "Entry Level": [
+            "Consulting Analyst",
+            "Associate Consultant"
+        ],
+        "Growth": [
+            "Senior Consultant",
+            "Engagement Manager",
+            "Partner"
+        ]
+    },
+
+    "Entrepreneur": {
+        "Foundation": [
+            "Business ideation",
+            "Market understanding",
+            "Risk-taking mindset"
+        ],
+        "Skill Building": [
+            "Fundraising basics",
+            "Marketing and sales",
+            "Team building"
+        ],
+        "Entry Level": [
+            "Startup Founder",
+            "Co-founder"
+        ],
+        "Growth": [
+            "Scale-up Founder",
+            "Serial Entrepreneur"
+        ]
+    },
+
+    # ================================
+    # Design, Media & Digital Creative (4)
+    # ================================
+    "UI/UX Designer": {
+        "Foundation": [
+            "Design principles",
+            "User-centered thinking",
+            "Visual aesthetics"
+        ],
+        "Skill Building": [
+            "Wireframing & prototyping",
+            "Figma/Adobe tools",
+            "UX research"
+        ],
+        "Entry Level": [
+            "Junior UI/UX Designer",
+            "Product Designer"
+        ],
+        "Growth": [
+            "Senior Designer",
+            "Design Lead",
+            "UX Manager"
+        ]
+    },
+
+    "Graphic Designer": {
+        "Foundation": [
+            "Color theory",
+            "Typography",
+            "Creative thinking"
+        ],
+        "Skill Building": [
+            "Photoshop/Illustrator",
+            "Brand design",
+            "Layout composition"
+        ],
+        "Entry Level": [
+            "Graphic Designer",
+            "Visual Designer"
+        ],
+        "Growth": [
+            "Senior Designer",
+            "Art Director"
+        ]
+    },
+
+    "Content Strategist / Copywriter": {
+        "Foundation": [
+            "Writing fundamentals",
+            "Storytelling",
+            "Audience understanding"
+        ],
+        "Skill Building": [
+            "SEO writing",
+            "Content planning",
+            "Marketing analytics"
+        ],
+        "Entry Level": [
+            "Content Writer",
+            "Copywriter"
+        ],
+        "Growth": [
+            "Content Strategist",
+            "Editorial Lead"
+        ]
+    },
+
+    "Digital Media Specialist": {
+        "Foundation": [
+            "Media fundamentals",
+            "Social platforms understanding",
+            "Creativity"
+        ],
+        "Skill Building": [
+            "Video editing",
+            "Campaign analytics",
+            "Content optimization"
+        ],
+        "Entry Level": [
+            "Media Executive",
+            "Social Media Manager"
+        ],
+        "Growth": [
+            "Media Strategist",
+            "Digital Marketing Head"
+        ]
+    },
+
+    # ================================
+    # Fashion, Architecture & Physical Design (4)
+    # ================================
+    "Fashion Designer": {
+        "Foundation": [
+            "Fashion basics",
+            "Fabric knowledge",
+            "Sketching"
+        ],
+        "Skill Building": [
+            "Garment construction",
+            "Trend analysis",
+            "Design software"
+        ],
+        "Entry Level": [
+            "Junior Fashion Designer"
+        ],
+        "Growth": [
+            "Senior Designer",
+            "Fashion Brand Owner"
+        ]
+    },
+
+    "Textile Designer": {
+        "Foundation": [
+            "Textile science",
+            "Pattern basics",
+            "Color understanding"
+        ],
+        "Skill Building": [
+            "Fabric design",
+            "Weaving techniques",
+            "CAD tools"
+        ],
+        "Entry Level": [
+            "Textile Designer"
+        ],
+        "Growth": [
+            "Senior Textile Designer",
+            "Design Consultant"
+        ]
+    },
+
+    "Architect": {
+        "Foundation": [
+            "Design fundamentals",
+            "Engineering basics",
+            "Spatial thinking"
+        ],
+        "Skill Building": [
+            "AutoCAD/Revit",
+            "Structural planning",
+            "Building codes"
+        ],
+        "Entry Level": [
+            "Junior Architect"
+        ],
+        "Growth": [
+            "Senior Architect",
+            "Principal Architect"
+        ]
+    },
+
+    "Interior Designer": {
+        "Foundation": [
+            "Interior aesthetics",
+            "Space planning",
+            "Material basics"
+        ],
+        "Skill Building": [
+            "Design software",
+            "Client handling",
+            "Lighting design"
+        ],
+        "Entry Level": [
+            "Interior Designer"
+        ],
+        "Growth": [
+            "Senior Interior Designer",
+            "Design Studio Owner"
+        ]
+    },
+
+    # ================================
+    # Finance, Accounting & Economics (4)
+    # ================================
+    "Financial Analyst": {
+        "Foundation": [
+            "Finance basics",
+            "Accounting principles",
+            "Excel skills"
+        ],
+        "Skill Building": [
+            "Financial modeling",
+            "Valuation techniques",
+            "Market analysis"
+        ],
+        "Entry Level": [
+            "Junior Financial Analyst"
+        ],
+        "Growth": [
+            "Senior Analyst",
+            "Finance Manager"
+        ]
+    },
+
+    "Chartered Accountant (CA)": {
+        "Foundation": [
+            "Accounting fundamentals",
+            "Taxation basics",
+            "Law basics"
+        ],
+        "Skill Building": [
+            "Auditing",
+            "Advanced taxation",
+            "Compliance"
+        ],
+        "Entry Level": [
+            "CA Articleship"
+        ],
+        "Growth": [
+            "Practicing CA",
+            "Finance Director"
+        ]
+    },
+
+    "Investment Banking Analyst": {
+        "Foundation": [
+            "Corporate finance basics",
+            "Accounting knowledge",
+            "Analytical thinking"
+        ],
+        "Skill Building": [
+            "Valuation",
+            "M&A analysis",
+            "Pitch deck creation"
+        ],
+        "Entry Level": [
+            "IB Analyst"
+        ],
+        "Growth": [
+            "Associate",
+            "Vice President"
+        ]
+    },
+
+    "Risk & Compliance Analyst": {
+        "Foundation": [
+            "Risk fundamentals",
+            "Regulatory basics",
+            "Ethics"
+        ],
+        "Skill Building": [
+            "Compliance frameworks",
+            "Risk modeling",
+            "Audit processes"
+        ],
+        "Entry Level": [
+            "Risk Analyst"
+        ],
+        "Growth": [
+            "Compliance Manager",
+            "Chief Risk Officer"
+        ]
+    },
+
+    # ================================
+    # Government, Public Service & Education (4)
+    # ================================
+    "Civil Services / Government Exams": {
+        "Foundation": [
+            "General studies",
+            "Current affairs",
+            "Ethics"
+        ],
+        "Skill Building": [
+            "Answer writing",
+            "Optional subject prep",
+            "Mock tests"
+        ],
+        "Entry Level": [
+            "Civil Services Officer"
+        ],
+        "Growth": [
+            "Senior Bureaucrat",
+            "Policy Maker"
+        ]
+    },
+
+    "Public Sector Officer": {
+        "Foundation": [
+            "Public administration basics",
+            "Aptitude skills",
+            "General awareness"
+        ],
+        "Skill Building": [
+            "Departmental training",
+            "Policy implementation",
+            "Leadership skills"
+        ],
+        "Entry Level": [
+            "Public Sector Officer"
+        ],
+        "Growth": [
+            "Senior Officer",
+            "Department Head"
+        ]
+    },
+
+    "School / College Teacher": {
+        "Foundation": [
+            "Subject mastery",
+            "Teaching aptitude",
+            "Communication"
+        ],
+        "Skill Building": [
+            "Pedagogy",
+            "Assessment techniques",
+            "Curriculum planning"
+        ],
+        "Entry Level": [
+            "Assistant Teacher",
+            "Lecturer"
+        ],
+        "Growth": [
+            "Senior Teacher",
+            "Principal"
+        ]
+    },
+
+    "Policy / Research Assistant": {
+        "Foundation": [
+            "Research methods",
+            "Policy basics",
+            "Analytical skills"
+        ],
+        "Skill Building": [
+            "Data analysis",
+            "Report writing",
+            "Field research"
+        ],
+        "Entry Level": [
+            "Policy Analyst"
+        ],
+        "Growth": [
+            "Senior Researcher",
+            "Policy Advisor"
+        ]
+    },
+
+    # ================================
+    # Healthcare & Life Sciences (4)
+    # ================================
+    "Medical Doctor": {
+        "Foundation": [
+            "Biology and anatomy",
+            "Medical entrance preparation",
+            "Ethics"
+        ],
+        "Skill Building": [
+            "Clinical training",
+            "Diagnosis skills",
+            "Patient care"
+        ],
+        "Entry Level": [
+            "Junior Resident"
+        ],
+        "Growth": [
+            "Specialist Doctor",
+            "Consultant"
+        ]
+    },
+
+    "Dentist": {
+        "Foundation": [
+            "Dental sciences basics",
+            "Biology fundamentals",
+            "Manual dexterity"
+        ],
+        "Skill Building": [
+            "Clinical dentistry",
+            "Oral surgery basics",
+            "Patient handling"
+        ],
+        "Entry Level": [
+            "Dental Practitioner"
+        ],
+        "Growth": [
+            "Dental Specialist",
+            "Clinic Owner"
+        ]
+    },
+
+    "Pharmacist": {
+        "Foundation": [
+            "Pharmaceutical sciences",
+            "Chemistry basics",
+            "Drug knowledge"
+        ],
+        "Skill Building": [
+            "Dispensing",
+            "Clinical pharmacy",
+            "Regulatory compliance"
+        ],
+        "Entry Level": [
+            "Pharmacist"
+        ],
+        "Growth": [
+            "Clinical Pharmacist",
+            "Pharma Manager"
+        ]
+    },
+
+    "Public Health Professional": {
+        "Foundation": [
+            "Public health basics",
+            "Epidemiology",
+            "Statistics"
+        ],
+        "Skill Building": [
+            "Health program planning",
+            "Data analysis",
+            "Policy evaluation"
+        ],
+        "Entry Level": [
+            "Public Health Officer"
+        ],
+        "Growth": [
+            "Program Manager",
+            "Health Policy Expert"
+        ]
+    },
+
+    # ================================
+    # Aviation, Law & Regulated (4)
+    # ================================
+    "Commercial Pilot": {
+        "Foundation": [
+            "Physics and mathematics",
+            "Aviation fundamentals",
+            "Medical fitness"
+        ],
+        "Skill Building": [
+            "Flight training",
+            "Simulator practice",
+            "Navigation skills"
+        ],
+        "Entry Level": [
+            "First Officer"
+        ],
+        "Growth": [
+            "Captain",
+            "Training Pilot"
+        ]
+    },
+
+    "Lawyer / Advocate": {
+        "Foundation": [
+            "Legal fundamentals",
+            "Critical reasoning",
+            "Ethics"
+        ],
+        "Skill Building": [
+            "Case laws",
+            "Drafting",
+            "Court practice"
+        ],
+        "Entry Level": [
+            "Junior Advocate"
+        ],
+        "Growth": [
+            "Senior Advocate",
+            "Legal Consultant"
+        ]
+    },
+
+    "Chartered Engineer": {
+        "Foundation": [
+            "Engineering basics",
+            "Problem solving",
+            "Technical knowledge"
+        ],
+        "Skill Building": [
+            "Professional certification",
+            "Project management",
+            "Quality standards"
+        ],
+        "Entry Level": [
+            "Engineer"
+        ],
+        "Growth": [
+            "Senior Engineer",
+            "Technical Director"
+        ]
+    },
+
+    "Merchant Navy Officer": {
+        "Foundation": [
+            "Marine studies basics",
+            "Navigation",
+            "Physical fitness"
+        ],
+        "Skill Building": [
+            "Sea training",
+            "Ship operations",
+            "Safety protocols"
+        ],
+        "Entry Level": [
+            "Deck Officer"
+        ],
+        "Growth": [
+            "Captain",
+            "Marine Superintendent"
+        ]
+    },
+
+    # ================================
+    # Skilled & Emerging Careers (4)
+    # ================================
+    "Digital Marketing Specialist": {
+        "Foundation": [
+            "Marketing basics",
+            "Digital platforms",
+            "Content fundamentals"
+        ],
+        "Skill Building": [
+            "SEO/SEM",
+            "Social media ads",
+            "Analytics tools"
+        ],
+        "Entry Level": [
+            "Digital Marketer"
+        ],
+        "Growth": [
+            "Marketing Strategist",
+            "Growth Head"
+        ]
+    },
+
+    "SEO / Growth Analyst": {
+        "Foundation": [
+            "Search engine basics",
+            "Web analytics",
+            "Data interpretation"
+        ],
+        "Skill Building": [
+            "SEO tools",
+            "Conversion optimization",
+            "A/B testing"
+        ],
+        "Entry Level": [
+            "SEO Analyst"
+        ],
+        "Growth": [
+            "Growth Manager",
+            "Digital Consultant"
+        ]
+    },
+
+    "Technical Content Creator": {
+        "Foundation": [
+            "Technical understanding",
+            "Writing skills",
+            "Audience awareness"
+        ],
+        "Skill Building": [
+            "Blogging",
+            "Video creation",
+            "SEO writing"
+        ],
+        "Entry Level": [
+            "Technical Writer"
+        ],
+        "Growth": [
+            "Content Lead",
+            "Independent Creator"
+        ]
+    },
+
+    "No-Code / Automation Specialist": {
+        "Foundation": [
+            "Workflow understanding",
+            "Basic logic",
+            "Automation concepts"
+        ],
+        "Skill Building": [
+            "No-code tools",
+            "API integration",
+            "Process automation"
+        ],
+        "Entry Level": [
+            "Automation Specialist"
+        ],
+        "Growth": [
+            "Automation Architect",
+            "Consultant"
+        ]
+    }
+}
+
+# =====================================================
+# SESSION STATE & STYLING
+# =====================================================
+if "page" not in st.session_state: st.session_state.page = "questionnaire"
+if "profile" not in st.session_state: st.session_state.profile = {}
+if "selected_career_name" not in st.session_state: st.session_state.selected_career_name = None
+if "show_results_btn" not in st.session_state: st.session_state.show_results_btn = False
+if "show_roadmap_btn" not in st.session_state: st.session_state.show_roadmap_btn = False
+
+st.markdown("""
+<style>
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; background-color: #F8FAFC; }
+    .career-card { background-color: white; padding: 1.5rem; border-radius: 18px; box-shadow: 0px 4px 20px rgba(0,0,0,0.05); border: 1px solid #E2E8F0; margin-bottom: 20px;}
+    .fit-badge { color: white; padding: 5px 12px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; }
+    .career-title { font-size: 1.4rem; font-weight: 800; color: #0F172A; margin: 10px 0; }
+    .stButton > button { width: 100%; border-radius: 10px; font-weight: 600; padding: 0.6rem;}
+</style>
+""", unsafe_allow_html=True)
 
 # =====================================================
 # SIDEBAR
 # =====================================================
 with st.sidebar:
     st.markdown("## 🧭 PathWise")
-    st.caption("AI-Assisted Career Path Explorer")
-
     st.divider()
-
     if st.button("🏠 Questionnaire"):
         st.session_state.page = "questionnaire"
         st.rerun()
-
-    if st.button("🎯 Results"):
-        st.session_state.page = "results"
-        st.rerun()
-
-    if st.button("🗺️ Career Roadmap"):
-        if st.session_state.selected_career is not None:
+    if st.session_state.show_results_btn:
+        if st.button("🎯 My Results"):
+            st.session_state.page = "results"
+            st.rerun()
+    if st.session_state.show_roadmap_btn:
+        if st.button("🗺️ Career Roadmap"):
             st.session_state.page = "roadmap"
             st.rerun()
-        else:
-            st.warning("Select a career first")
-
-    st.divider()
-    st.caption("Guidance only. Not a prediction.")
 
 # =====================================================
-# HEADER
-# =====================================================
-def header(title, subtitle):
-    st.markdown(f"<h1>{title}</h1>", unsafe_allow_html=True)
-    st.caption(subtitle)
-    st.divider()
-
-# =====================================================
-# QUESTIONNAIRE PAGE
+# PAGES
 # =====================================================
 def questionnaire_page():
-    header("Discover Your Career Path", "Tell us about yourself — this helps us guide you better")
-
-    st.markdown("<p style='color:#475569;'>Select up to <b>3 options</b> where applicable for best results.</p>", unsafe_allow_html=True)
-
-    with st.form("questionnaire"):
-        st.subheader("🎓 Academic Background")
-        col1, col2 = st.columns(2)
-
-        with col1:
-            education = st.selectbox(
-                "Education Level",
-                ["School (9–12)", "Undergraduate", "Postgraduate", "Other"]
-            )
-        with col2:
-            field = st.selectbox(
-                "Field of Study",
-                ["Science", "Commerce", "Arts / Humanities", "Engineering", "Management", "Other"]
-            )
-
+    st.title("Build Your Profile")
+    with st.form("main_form"):
+        c1, c2 = st.columns(2)
+        edu = c1.selectbox("Education", ["Postgraduate", "Undergraduate", "School (Classes 9-12)", "Other"])
+        field = c2.selectbox("Field", ["Engineering", "Science", "Commerce", "Management", "Arts and Humanities", "Other"])
+        
         st.divider()
-        st.subheader("💡 Interests & Activities")
-        interests = st.multiselect(
-            "Which activities do you genuinely enjoy? (Select up to 3)",
-            [
-                "Problem solving / logical thinking",
-                "Working with numbers or data",
-                "Designing or creating visuals",
-                "Writing or storytelling",
-                "Teaching or explaining concepts",
-                "Managing people or projects",
-                "Building or fixing things",
-                "Researching or deep learning",
-                "Public speaking or persuasion"
-            ],
-            max_selections=3
-        )
-
+        st.subheader("Mindset & Stability")
+        c3, c4, c5 = st.columns(3)
+        rate = c3.radio("Learning Pace", ["Slow", "Average", "Fast"])
+        risk = c4.radio("Risk Tolerance", ["Low Risk", "Moderate Risk", "High Risk"])
+        time_h = c5.radio("Time to Stability", ["Immediate (0-1 year)", "Mid Term (1-3 years)", "Long Term (3+ years)"])
+        
         st.divider()
-        st.subheader("💪 Strengths")
-        strengths = st.multiselect(
-            "What do you consider your strongest abilities? (Select up to 3)",
-            [
-                "Logical thinking",
-                "Communication",
-                "Creativity",
-                "Discipline & consistency",
-                "Leadership",
-                "Learning new skills quickly"
-            ],
-            max_selections=3
-        )
+        st.subheader("Interests & Strengths")
+        ints = st.multiselect("Interests (Pick 3)", mlb_int.classes_.tolist(), max_selections=3)
+        strs = st.multiselect("Strengths (Pick 3)", mlb_str.classes_.tolist(), max_selections=3)
+        
+        if st.form_submit_button("Predict Careers →"):
+            st.session_state.profile = {"education": edu, "field": field, "interests": ints, "strengths": strs, "learning_rate": rate, "time_horizon": time_h, "risk": risk}
+            st.session_state.show_results_btn = True
+            st.session_state.page = "results"
+            st.rerun()
 
-        st.divider()
-        st.subheader("📚 Learning Preferences")
-        col3, col4 = st.columns(2)
-
-        with col3:
-            learning_style = st.radio(
-                "Preferred learning style",
-                ["Mostly theory-based", "Mostly practical", "Balanced"]
-            )
-        with col4:
-            learning_rate = st.radio(
-                "How quickly do you usually pick up new skills?",
-                ["Slow but steady", "Average", "Fast learner"]
-            )
-
-        st.divider()
-        st.subheader("⏱️ Career Preferences")
-        col5, col6 = st.columns(2)
-
-        with col5:
-            time_horizon = st.radio(
-                "When do you want career stability?",
-                ["0–1 year", "1–3 years", "3+ years"]
-            )
-        with col6:
-            risk = st.radio(
-                "Risk tolerance",
-                ["Prefer stable paths", "Moderate risk", "High risk tolerance"]
-            )
-
-        submitted = st.form_submit_button("See Career Matches →")
-
-    if submitted:
-        st.session_state.profile = {
-            "education": education,
-            "field": field,
-            "interests": interests,
-            "strengths": strengths,
-            "learning_style": learning_style,
-            "learning_rate": learning_rate,
-            "time_horizon": time_horizon,
-            "risk": risk
-        }
-        st.session_state.page = "results"
-        st.rerun()
-
-# =====================================================
-# RESULTS PAGE
-# =====================================================
 def results_page():
-    header("Your Best Career Matches", "Top 3 paths aligned with your interests")
-
-    user_interests = set(st.session_state.profile.get("interests", []))
-
-    scored = []
-    for _, row in career_df.iterrows():
-        activities = set(row["core_activities"].split(", "))
-        score = len(user_interests.intersection(activities))
-        scored.append((row, score))
-
-    top3 = sorted(scored, key=lambda x: x[1], reverse=True)[:3]
-
+    st.title("Your AI Matches")
+    matches = get_ml_recommendations(st.session_state.profile)
     cols = st.columns(3)
-
-    for col, (career, _) in zip(cols, top3):
-        with col:
-            # Normalize career name (remove Path numbering if present)
-            display_name = career['career_name'].split(' Path')[0]
-
+    for i, match in enumerate(matches):
+        with cols[i]:
+            score = match['fit_score']
+            color = "#0D9488" if score >= 90 else "#14B8A6"
             st.markdown(f"""
             <div class="career-card">
-                <img src="https://source.unsplash.com/600x400/?career,profession" 
-                     style="width:100%; border-radius:14px;">
-                <div class="career-title">{display_name}</div>
-                <div class="career-domain">{career['domain']}</div>
+                <span class="fit-badge" style="background-color: {color};">{score}% Match</span>
+                <div class="career-title">{match['career_name']}</div>
             </div>
             """, unsafe_allow_html=True)
-
-            if st.button(f"View Roadmap → {display_name}"):
-                st.session_state.selected_career = career
-                st.session_state.selected_career['display_name'] = display_name
+            if st.button(f"View Roadmap →", key=f"b_{i}"):
+                st.session_state.selected_career_name = match['career_name']
+                st.session_state.show_roadmap_btn = True
                 st.session_state.page = "roadmap"
                 st.rerun()
 
-
-
-DOMAIN_ROADMAPS = {
-
-    "Technology & Software": {
-        "Foundation Phase": [
-            "Basic programming concepts",
-            "Computer fundamentals",
-            "Logical and analytical thinking"
-        ],
-        "Skill Development Phase": [
-            "Programming languages (Python / Java)",
-            "Databases and development tools",
-            "Version control and testing"
-        ],
-        "Entry & Early Career Phase": [
-            "Junior Software Engineer",
-            "Data Analyst",
-            "QA / Test Engineer"
-        ],
-        "Growth & Specialization Phase": [
-            "Senior Engineer",
-            "Product Manager (Tech)",
-            "System Architect / Specialist"
-        ]
-    },
-
-    "Business, Management & Operations": {
-        "Foundation Phase": [
-            "Business fundamentals",
-            "Economics and accounting basics",
-            "Communication skills"
-        ],
-        "Skill Development Phase": [
-            "Business analytics",
-            "Process optimization",
-            "Stakeholder management"
-        ],
-        "Entry & Early Career Phase": [
-            "Business Analyst",
-            "Operations Executive",
-            "Management Trainee"
-        ],
-        "Growth & Specialization Phase": [
-            "Operations Manager",
-            "Management Consultant",
-            "Entrepreneur"
-        ]
-    },
-
-    "Design, Media & Digital Creative": {
-        "Foundation Phase": [
-            "Design principles",
-            "Creativity and storytelling",
-            "Visual aesthetics"
-        ],
-        "Skill Development Phase": [
-            "Design tools (Figma, Adobe)",
-            "UX fundamentals",
-            "Content creation"
-        ],
-        "Entry & Early Career Phase": [
-            "UI/UX Designer",
-            "Graphic Designer",
-            "Content Strategist"
-        ],
-        "Growth & Specialization Phase": [
-            "Design Lead",
-            "Creative Director",
-            "Digital Media Specialist"
-        ]
-    },
-
-    "Fashion, Architecture & Physical Design": {
-        "Foundation Phase": [
-            "Design basics",
-            "Material knowledge",
-            "Sketching and visualization"
-        ],
-        "Skill Development Phase": [
-            "CAD tools",
-            "Structural and aesthetic design",
-            "Industry standards"
-        ],
-        "Entry & Early Career Phase": [
-            "Fashion Designer",
-            "Textile Designer",
-            "Junior Architect"
-        ],
-        "Growth & Specialization Phase": [
-            "Senior Designer",
-            "Interior Designer",
-            "Architectural Consultant"
-        ]
-    },
-
-    "Finance, Accounting & Economics": {
-        "Foundation Phase": [
-            "Accounting fundamentals",
-            "Mathematics and statistics",
-            "Economic principles"
-        ],
-        "Skill Development Phase": [
-            "Financial analysis",
-            "Taxation and compliance",
-            "Financial modeling"
-        ],
-        "Entry & Early Career Phase": [
-            "Financial Analyst",
-            "Accounting Executive",
-            "Risk Analyst"
-        ],
-        "Growth & Specialization Phase": [
-            "Chartered Accountant",
-            "Investment Banker",
-            "Finance Manager"
-        ]
-    },
-
-    "Government, Public Service & Education": {
-        "Foundation Phase": [
-            "General studies",
-            "Ethics and governance",
-            "Communication skills"
-        ],
-        "Skill Development Phase": [
-            "Policy analysis",
-            "Teaching methodologies",
-            "Research skills"
-        ],
-        "Entry & Early Career Phase": [
-            "Government Exam Aspirant",
-            "Teaching Assistant",
-            "Policy Research Assistant"
-        ],
-        "Growth & Specialization Phase": [
-            "Civil Services Officer",
-            "Senior Educator",
-            "Public Sector Leader"
-        ]
-    },
-
-    "Healthcare & Life Sciences": {
-        "Foundation Phase": [
-            "Biology fundamentals",
-            "Human anatomy",
-            "Healthcare ethics"
-        ],
-        "Skill Development Phase": [
-            "Clinical knowledge",
-            "Laboratory practices",
-            "Healthcare regulations"
-        ],
-        "Entry & Early Career Phase": [
-            "Medical Intern",
-            "Pharmacist",
-            "Public Health Associate"
-        ],
-        "Growth & Specialization Phase": [
-            "Medical Doctor",
-            "Specialist",
-            "Healthcare Administrator"
-        ]
-    },
-
-    "Aviation, Law & Other Regulated Professions": {
-        "Foundation Phase": [
-            "Domain-specific academics",
-            "Regulatory awareness",
-            "Professional ethics"
-        ],
-        "Skill Development Phase": [
-            "Professional certifications",
-            "Practical training",
-            "Compliance standards"
-        ],
-        "Entry & Early Career Phase": [
-            "Commercial Pilot",
-            "Junior Advocate",
-            "Chartered Engineer"
-        ],
-        "Growth & Specialization Phase": [
-            "Senior Pilot",
-            "Senior Lawyer",
-            "Industry Expert"
-        ]
-    },
-
-    "Skilled & Emerging Careers": {
-        "Foundation Phase": [
-            "Digital literacy",
-            "Basic technical skills",
-            "Online platforms understanding"
-        ],
-        "Skill Development Phase": [
-            "Digital marketing",
-            "SEO and analytics",
-            "Automation tools"
-        ],
-        "Entry & Early Career Phase": [
-            "Digital Marketing Specialist",
-            "SEO Analyst",
-            "Technical Content Creator"
-        ],
-        "Growth & Specialization Phase": [
-            "Growth Strategist",
-            "No-Code Specialist",
-            "Independent Consultant"
-        ]
-    }
-}
-
-# =====================================================
-# ROADMAP PAGE
-# =====================================================
 def roadmap_page():
-    career = st.session_state.selected_career
-
-    if career is None:
-        st.warning("No career selected.")
-        return
-
-    display_name = career.get("display_name", career["career_name"])
-    domain = str(career["domain"])
-
-    header(display_name, "Domain-Based Career Roadmap")
-
-    st.subheader("📌 Overview")
-    st.write(
-        f"This roadmap represents a **standard progression** within the "
-        f"**{domain}** domain. Individual paths may vary based on effort and opportunities."
-    )
-
-    st.subheader("🛠️ Career Roadmap")
-
-    roadmap = DOMAIN_ROADMAPS.get(domain)
-
+    name = st.session_state.selected_career_name
+    st.title(f"Roadmap: {name}")
+    roadmap = CAREER_ROADMAPS.get(name)
     if roadmap:
-        for phase, points in roadmap.items():
+        for phase, steps in roadmap.items():
             st.markdown(f"### 🔹 {phase}")
-            for p in points:
-                st.markdown(f"- {p}")
+            for s in steps: st.markdown(f"- {s}")
             st.divider()
-    else:
-        st.info("Roadmap not available for this domain.")
-
-    st.subheader("🚀 Typical Entry Roles")
-    for role in career["entry_roles"].split(","):
-        st.markdown(f"- {role}")
-
-    st.subheader("🔁 Related Career Options")
-    for adj in career["adjacent_careers"].split(","):
-        st.markdown(f"- {adj}")
-
-    if st.button("← Back to Results"):
+    if st.button("← Back"):
         st.session_state.page = "results"
         st.rerun()
-
 
 # =====================================================
 # ROUTER
 # =====================================================
-if st.session_state.page == "questionnaire":
-    questionnaire_page()
-elif st.session_state.page == "results":
-    results_page()
-elif st.session_state.page == "roadmap":
-    roadmap_page()
+if st.session_state.page == "questionnaire": questionnaire_page()
+elif st.session_state.page == "results": results_page()
+elif st.session_state.page == "roadmap": roadmap_page()
