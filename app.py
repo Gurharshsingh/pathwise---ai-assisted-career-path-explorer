@@ -4,7 +4,7 @@ import joblib
 import numpy as np
 
 # --- 1. PROFESSIONAL CONFIGURATION ---
-st.set_page_config(page_title="CareerAI Pro | Discovery & Roadmaps", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="Pathwise | Discovery & Roadmaps", page_icon="🎯", layout="wide")
 
 # Custom CSS for Professional SaaS Look
 st.markdown("""
@@ -690,4 +690,5 @@ elif st.session_state.page == "Roadmaps":
             with c2:
                 st.markdown("**Recommended Resources**")
                 for res in data.get('Resources', ["Official Documentation", "Industry Whitepapers"]):
+
                     st.write(f"📚 {res}")
