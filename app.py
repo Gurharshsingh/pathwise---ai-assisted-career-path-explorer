@@ -4,31 +4,115 @@ import joblib
 import numpy as np
 
 # --- 1. PROFESSIONAL CONFIGURATION ---
-st.set_page_config(page_title="Pathwise | Discovery & Roadmaps", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="PATHWISE | Discovery & Roadmaps", page_icon="🎯", layout="wide")
 
 # Custom CSS for Professional SaaS Look
 st.markdown("""
-    <style>
-    .main { background-color: #f8f9fa; }
-    .stButton>button { 
-        width: 100%; border-radius: 8px; height: 3.5em; 
-        background-color: #007bff; color: white; font-weight: bold; border: none;
-    }
-    .stButton>button:hover { background-color: #0056b3; }
-    .result-card {
-        padding: 20px; border-radius: 12px; background-color: white;
-        border-left: 8px solid #007bff; margin-bottom: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-    .roadmap-section {
-        background-color: #ffffff; padding: 25px; border-radius: 15px;
-        border: 1px solid #e9ecef; margin-top: 20px;
-    }
-    .step-label {
-        font-weight: bold; color: #007bff; text-transform: uppercase; font-size: 12px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+
+/* ============================
+   GLOBAL TYPOGRAPHY
+============================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ============================
+   BACKGROUND
+============================ */
+.main {
+    background: linear-gradient(180deg, #f8f9fa 0%, #eef2f7 100%);
+}
+
+/* ============================
+   BUTTONS
+============================ */
+.stButton>button { 
+    width: 100%;
+    height: 3.6em;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #4facfe, #007bff);
+    color: white;
+    font-weight: 700;
+    border: none;
+    letter-spacing: 0.3px;
+    box-shadow: 0 0 18px rgba(79,172,254,0.45);
+    transition: all 0.3s ease;
+}
+
+.stButton>button:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 0 30px rgba(79,172,254,0.75);
+}
+
+/* ============================
+   RESULT CARDS
+============================ */
+.result-card {
+    padding: 26px;
+    border-radius: 18px;
+    background: linear-gradient(145deg,#ffffff,#f1f4f9);
+    border-left: 8px solid #007bff;
+    margin-bottom: 22px;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.08);
+    animation: fadeUp 0.6s ease;
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================
+   METRICS
+============================ */
+div[data-testid="metric-container"] {
+    background: white;
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow: 0 0 25px rgba(0,123,255,0.12);
+}
+
+/* ============================
+   EXPANDERS
+============================ */
+div[data-testid="stExpander"] {
+    border-radius: 16px;
+    border: 1px solid rgba(0,123,255,0.15);
+    box-shadow: 0 0 18px rgba(0,123,255,0.08);
+}
+
+/* ============================
+   SECTION HEADERS
+============================ */
+h1, h2, h3 {
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+h4, h5 {
+    font-weight: 600;
+}
+
+
+.career-image-card {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    border: 1px solid rgba(0,123,255,0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.career-image-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 18px 40px rgba(0,123,255,0.35);
+}
+
+
+</style>
+""", unsafe_allow_html=True)
+
 
 # --- 2. ASSET LOADER ---
 @st.cache_resource
@@ -550,13 +634,59 @@ DEEP_DATA = {
     }
 }
 
+CAREER_IMAGES = {
+    "Software Engineer": "https://images.unsplash.com/photo-1581090700227-1e37b190418e",
+    "Data Analyst": "https://images.unsplash.com/photo-1551288049-bebda4e38f71",
+    "Product Manager (Tech)": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf",
+    "QA / Test Engineer": "https://images.unsplash.com/photo-1580894894513-541e068a3e2b",
+    "Business Analyst": "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a",
+    "Operations Manager": "https://images.unsplash.com/photo-1581093458791-9d15482778c9",
+    "Management Consultant": "https://images.unsplash.com/photo-1507679799987-c73779587ccf",
+    "Entrepreneur (Early-stage)": "https://images.unsplash.com/photo-1557804506-669a67965ba0",
+    "UI/UX Designer": "https://images.unsplash.com/photo-1586717791821-3f44a563fa4c",
+    "Graphic Designer": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+    "Content Strategist / Copywriter": "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2",
+    "Digital Media Specialist": "https://images.unsplash.com/photo-1557838923-2985c318be48",
+    "Fashion Designer": "https://images.unsplash.com/photo-1520975922215-2c8b7a0aabf3",
+    "Textile Designer": "https://images.unsplash.com/photo-1512436991641-6745cdb1723f",
+    "Architect": "https://images.unsplash.com/photo-1503387762-592deb58ef4e",
+    "Interior Designer": "https://images.unsplash.com/photo-1505691938895-1758d7feb511",
+    "Financial Analyst": "https://images.unsplash.com/photo-1565373679107-344d6c7d32b3",
+    "Chartered Accountant (CA)": "https://images.unsplash.com/photo-1554224155-6726b3ff858f",
+    "Investment Banking Analyst": "https://images.unsplash.com/photo-1567427018141-0584cfcbf1b8",
+    "Risk & Compliance Analyst": "https://images.unsplash.com/photo-1605902711622-cfb43c44367f",
+    "Civil Services / Government Exams": "https://images.unsplash.com/photo-1551836022-d5d88e9218df",
+    "Public Sector Officer": "https://images.unsplash.com/photo-1573496130141-209d200cebdc",
+    "School / College Teacher": "https://images.unsplash.com/photo-1524178232363-1fb2b075b655",
+    "Policy / Research Assistant": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40",
+    "Medical Doctor": "https://images.unsplash.com/photo-1580281657527-47d1e2c94a31",
+    "Dentist": "https://images.unsplash.com/photo-1606813902917-7f8c66f6a6b5",
+    "Pharmacist": "https://images.unsplash.com/photo-1580281658629-3e7f2f3b2b7f",
+    "Public Health Professional": "https://images.unsplash.com/photo-1584036561566-baf8f5f1b144",
+    "Commercial Pilot": "https://images.unsplash.com/photo-1517948430535-1e2469d314fe",
+    "Lawyer / Advocate": "https://images.unsplash.com/photo-1505664194779-8beaceb93744",
+    "Chartered Engineer": "https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc",
+    "Merchant Navy Officer": "https://images.unsplash.com/photo-1500375592092-40eb2168fd21",
+    "Digital Marketing Specialist": "https://images.unsplash.com/photo-1557838923-2985c318be48",
+    "SEO / Growth Analyst": "https://images.unsplash.com/photo-1542744173-8e7e53415bb0",
+    "Technical Content Creator": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f",
+    "No-Code / Automation Specialist": "https://images.unsplash.com/photo-1581091012184-7b1b06b8b0f1"
+}
 # --- 4. SESSION MANAGEMENT ---
 if 'page' not in st.session_state: st.session_state.page = "Questionnaire"
 if 'results' not in st.session_state: st.session_state.results = None
+if "selected_career" not in st.session_state:
+    st.session_state.selected_career = None
 
 # --- 5. SIDEBAR NAVIGATION ---
 with st.sidebar:
-    st.markdown("### 🎯 PATHWISE")
+    st.markdown("""
+    <div style="text-align:center;">
+        <img src="https://cdn-icons-png.flaticon.com/512/1087/1087840.png" width="70">
+        <h3>PATHWISE</h3>
+        <p style="color:#6c757d;">AI Career Intelligence</p>
+    </div>
+    """, unsafe_allow_html=True)
     st.caption("Advanced Career Prediction System")
     st.divider()
     
@@ -572,8 +702,17 @@ with st.sidebar:
 
 # --- 6. PAGE: QUESTIONNAIRE ---
 if st.session_state.page == "Questionnaire":
-    st.header("Welcome to PATHWISE - Ai assisted Career Path Explorer")
-    st.title("Professional Career Assessment")
+    st.markdown("""
+    <div style="display:flex;align-items:center;gap:25px;">
+        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" width="90">
+        <div>
+            <h1>PATHWISE</h1>
+            <p style="font-size:18px;color:#6c757d;">
+            AI-Powered Career Discovery & Strategic Roadmapping
+            </p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     st.write("Complete the profile below to generate your AI-powered career report.")
     
     with st.form("main_quiz"):
@@ -618,77 +757,129 @@ if st.session_state.page == "Questionnaire":
 
 # --- 7. PAGE: RESULTS ---
 elif st.session_state.page == "Results":
-    st.title("📊 Your Professional Fit Analysis")
-    st.write("The following careers align with your logical profile.")
-    
-    
+
+    st.title("📊 Career Fit Analysis")
 
     for item in st.session_state.results:
-        st.markdown(f"""
-            <div class="result-card">
-                <div style="display: flex; justify-content: space-between;">
-                    <h3>{item['career']}</h3>
-                    <h2 style="color: #007bff;">{item['score']}%</h2>
+        career = item["career"]
+        score = item["score"]
+        img = CAREER_IMAGES.get(career)
+
+        col_img, col_data = st.columns([1, 3])
+
+        with col_img:
+            if img:
+                st.markdown(
+                    f"""
+                    <div class="career-image-card">
+                        <img src="{img}" style="width:100%; height:160px; object-fit:cover;">
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        with col_data:
+            st.markdown(f"""
+                <div class="result-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>{career}</h3>
+                        <h2 style="color:#007bff;">{score}%</h2>
+                    </div>
                 </div>
-            </div>
-        """, unsafe_allow_html=True)
-        st.progress(item['score']/100)
+            """, unsafe_allow_html=True)
+            st.progress(score / 100)
+
+            if st.button(f"View Roadmap → {career}", key=f"roadmap_{career}"):
+                st.session_state.selected_career = career
+                st.session_state.page = "Roadmaps"
+                st.rerun()
+
 
 # --- PAGE: ROADMAPS (ULTRA-DETAILED) ---
 elif st.session_state.page == "Roadmaps":
-    st.title("🗺️ Strategic Career Blueprints")
-    st.markdown("##### Professional Guidance & Knowledge Repository")
-    
-    career_list = [r['career'] for r in st.session_state.results]
-    tabs = st.tabs([f"📍 {n}" for n in career_list])
-    
+
+    st.title("🗺 Strategic Career Roadmaps")
+
+    careers = [r["career"] for r in st.session_state.results]
+    tabs = st.tabs(careers)
+
     for i, tab in enumerate(tabs):
         with tab:
-            career = career_list[i]
+            career = careers[i]
             data = DEEP_DATA.get(career, DEEP_DATA["Software Engineer"])
-            
-            # 1. Executive Summary Header
-            st.markdown(f"### The Path to {career}")
-            st.markdown(f"**Primary Objective:** Transition from a learner to a {career} within {data['Stats']['Time']}.")
-            
-            # 2. Industry Metrics Grid
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Prep Time", data['Stats']['Time'])
-            m2.metric("Industry Demand", data['Stats']['Market'])
-            m3.metric("Salary (Entry)", data['Stats']['Salary'])
-            m4.metric("Difficulty", "Medium-High")
 
-            # 3. Prerequisites & Core Knowledge
+            # ---------- Career Image (Container) ----------
+            img = CAREER_IMAGES.get(career)
+            if img:
+                st.markdown(
+                    f"""
+                    <div class="career-image-card" style="margin-bottom:24px;">
+                        <img src="{img}" style="width:100%; height:280px; object-fit:cover;">
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            st.success(f"Personalized roadmap for **{career}**")
+
+            # ---------- Executive Summary ----------
+            st.markdown(
+                f"**Primary Objective:** Transition from a learner to a **{career}** within **{data['Stats']['Time']}**."
+            )
+
+            # ---------- Industry Metrics ----------
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Prep Time", data["Stats"]["Time"])
+            m2.metric("Industry Demand", data["Stats"]["Market"])
+            m3.metric("Salary (Entry)", data["Stats"]["Salary"])
+            m4.metric("Difficulty", "Medium–High")
+
+            # ---------- Prerequisites & Tools ----------
             st.divider()
-            col_pre, col_tools = st.columns([1, 1])
+            col_pre, col_tools = st.columns(2)
+
             with col_pre:
                 st.markdown("#### 📋 Core Prerequisites")
-                for p in data['Prereq']:
-                    st.write(f"🔹 {p}")
+                for p in data["Prereq"]:
+                    st.write(f"• {p}")
+
             with col_tools:
                 st.markdown("#### 🛠️ Professional Toolstack")
-                st.write(" / ".join([f"`{t}`" for t in data['Tools']]))
+                st.write(" / ".join([f"`{t}`" for t in data["Tools"]]))
 
-            # 4. The 5-Tier Mastery Path
+            # ---------- Mastery Path ----------
             st.divider()
             st.markdown("#### 🛤️ The 5-Tier Mastery Path")
-            
-            for step in data['Steps']:
-                with st.expander(f"📍 {step['title']}", expanded=(step == data['Steps'][0])):
+
+            for step in data["Steps"]:
+                with st.expander(
+                    f"📍 {step['title']}",
+                    expanded=(step == data["Steps"][0])
+                ):
                     st.markdown(f"**Deep Dive:** {step['desc']}")
                     st.markdown(f"**Knowledge Pill:** {step['knowledge']}")
                     st.info(f"💡 **Strategy:** {step['tip']}")
-            
-            # 5. Certification & Resources
+
+            # ---------- Certifications ----------
             st.divider()
             st.markdown("#### 🎓 Credentials & Learning Resources")
-            c1, c2 = st.columns([1, 1])
+
+            c1, c2 = st.columns(2)
             with c1:
                 st.markdown("**Must-Have Certifications**")
-                for cert in data['Certs']:
+                for cert in data["Certs"]:
                     st.code(cert)
+
             with c2:
                 st.markdown("**Recommended Resources**")
-                for res in data.get('Resources', ["Official Documentation", "Industry Whitepapers"]):
-
+                for res in data.get(
+                    "Resources",
+                    ["Official Documentation", "Industry Whitepapers"]
+                ):
                     st.write(f"📚 {res}")
+
+
+
+
+
+    
